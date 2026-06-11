@@ -1,0 +1,35 @@
+{
+
+  "permissions": {
+
+    "allow": [
+
+      "Read",
+
+      "Write",
+
+      "Edit",
+
+      "Bash(flutter *)",
+
+      "Bash(dart *)",
+
+      "Bash(cd *)",
+
+      "Bash(mkdir *)",
+
+      "Bash(cat *)",
+
+      "Bash(ls *)",
+
+      "Bash(grep *)",
+
+      "Bash(find *)",
+
+      "Bash(git *)"
+
+    ]
+
+  }
+
+}
