@@ -20,7 +20,7 @@ Firestore, Freezed, Rive, Google Fonts (Inter)
 
 - backend/ — Python FastAPI (separate project, see .claude/rules/)
 
-- modal_service/ — Python Modal TTS (separate project)
+- modal_service/ — Python Modal TTS + STT (separate project)
 
 ## Universal rules
 
@@ -37,3 +37,11 @@ Firestore, Freezed, Rive, Google Fonts (Inter)
 - All styling from lib/core/theme.dart. No ad-hoc colors, text
 
   styles, or spacing values anywhere.
+
+- If you hit a design decision not covered here, favor simplicity
+
+  and shippability. Don't add abstraction layers, wrapper classes,
+
+  or architecture that isn't needed yet. Build the minimum that works
+
+  correctly and looks polished.
