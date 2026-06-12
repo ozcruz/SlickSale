@@ -1,75 +1,102 @@
-# SlickSale Backend
 
-FastAPI server providing chat (SSE streaming), speech-to-text,
+Loads only when editing Python backend code.
 
-scenario management, and AI scoring endpoints.
+---
 
-## Tech stack
+globs:
 
-- Python 3.11
+  - "backend/**"
 
-- FastAPI + sse-starlette
+---
 
-- OpenAI API (chat completions, whisper)
+# Backend Rules
 
-- httpx (async HTTP client for calling Modal TTS)
+Python FastAPI server. Separate project from Flutter — has its own
 
-- Pydantic v2 for models and settings
+requirements.txt, Dockerfile, virtual environment.
 
 ## Architecture
 
-- `app/main.py` — FastAPI app, CORS, lifespan, health check
+- app/main.py — FastAPI app, CORS, lifespan, health check
 
-- `app/config.py` — Pydantic BaseSettings (all config from env vars)
+- app/config.py — Pydantic BaseSettings (all config from env vars)
 
-- `app/routers/` — one file per endpoint group (chat, stt, scenarios, scoring)
+- app/routers/ — one file per endpoint group
 
-- `app/services/` — business logic (LLM streaming, TTS client, sentence chunker)
+- app/services/ — business logic (LLM, TTS client, sentence chunker)
 
-- `app/models/schemas.py` — Pydantic request/response models
-
-- `app/prompts/` — LLM system prompts (master wrapper + scenarios)
-
-## Key endpoints
-
-- `POST /chat` — SSE stream. Streams LLM tokens, fires TTS per
-
-  sentence, returns text + audio + visemes interleaved. Core endpoint.
-
-- `POST /transcribe` — proxy to OpenAI Whisper
-
-- `GET /scenarios` — returns scenario list (never exposes systemPrompt)
-
-- `POST /score` — calls GPT-4o for structured scoring JSON
+- app/prompts/ — LLM system prompts
 
 ## Rules
 
-- NO API keys in code. Everything from environment variables.
+- No API keys in code. Everything from environment variables.
 
-- ALL I/O is async. No blocking calls on the event loop.
+- All I/O is async. No blocking calls.
 
 - Type hints on every function.
 
-- Proper HTTPException with meaningful status codes.
+- HTTPException with meaningful status codes for errors.
 
-- The sentence chunker must handle edge cases: abbreviations (Mr. Dr.),
+- TTS calls fire per-sentence via asyncio.create_task — parallel
 
-  decimals ($10.99), ellipsis (...).
+  with LLM streaming. Don't wait for TTS before sending next text.
 
-- TTS calls fire per-sentence via asyncio.create_task — parallel with
+## Scoring endpoint
 
-  continued LLM streaming. Don't wait for TTS before sending next text.
+Use OpenAI Structured Outputs for the scoring response, NOT the
 
-## Running locally
+older json_object mode. Structured Outputs guarantee schema conformance.
 
-cd backend pip install -r requirements.txt cp .env.example .env  # fill in your keys uvicorn app.main:app --reload --port 8000
+Define a Pydantic model for the score response:
+
+    class ScoreResult(BaseModel):
+
+        overall_score: float
+
+        category_scores: dict[str, float]
+
+        feedback: str
+
+        tips: list[str]
+
+Use the SDK's beta parse method:
+
+    completion = await client.beta.chat.completions.parse(
+
+        model="gpt-4o",
+
+        messages=messages,
+
+        response_format=ScoreResult,
+
+    )
+
+    result = completion.choices[0].message.parsed
+
+This replaces response_format={"type": "json_object"} which only
+
+guarantees valid JSON, not schema conformance.
+
+## STT routing
+
+POST /transcribe forwards audio to Modal /transcribe endpoint
+
+(NOT OpenAI Whisper API). Use httpx.AsyncClient (same client used
+
+for TTS calls). Handle Modal cold start gracefully — same timeout
+
+strategy as TTS.
 
 ## Session end detection
 
-The LLM appends `[SESSION_COMPLETE:CLOSED]` or `[SESSION_COMPLETE:LOST]`
+LLM appends [SESSION_COMPLETE:CLOSED] or [SESSION_COMPLETE:LOST].
 
-to its final message. The chat router strips these tags before sending
+Chat router strips tags, emits separate SSE event. Frontend never
 
-to the client, then emits a separate `session_complete` SSE event. The
+sees raw tags.
 
-frontend never sees the raw tags.
+## Sentence chunker
+
+Split on .!? but NOT on: abbreviations (Mr. Dr. Inc.), decimals
+
+($10.99), or ellipsis (...). Bad chunking = weird TTS pauses.
