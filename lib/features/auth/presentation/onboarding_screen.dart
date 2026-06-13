@@ -45,14 +45,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     (emoji: '🏆', label: 'Advanced', description: '3+ years'),
   ];
 
-  static const List<({String emoji, String label})> _industries = [
-    (emoji: '☁️', label: 'SaaS'),
-    (emoji: '🛡️', label: 'Insurance'),
-    (emoji: '🏠', label: 'Real Estate'),
-    (emoji: '🛍️', label: 'Retail'),
-    (emoji: '✨', label: 'Other'),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -129,7 +121,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 onSelect: (level) => setState(() => _level = level),
               ),
               _IndustryStep(
-                industries: _industries,
+                industries: industryOptions,
                 selected: _industry,
                 onSelect: (industry) => setState(() => _industry = industry),
               ),

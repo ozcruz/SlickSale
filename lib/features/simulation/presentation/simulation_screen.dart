@@ -1,25 +1,33 @@
-// Phase-1 placeholder: the Rive avatar, chat, and mic flow arrive in
-// Phase 2. What's already real per the mockup "Simulation" screen:
+// Placeholder until the live simulation ships: the Rive avatar, chat, and
+// mic flow arrive with the simulation phase. What's already real per the
+// mockup "Simulation" screen:
 // - near-black sim background, blurred top bar (backdrop blur directive),
 //   End Session pill, and the one gradient the design system allows — the
 //   subtle radial avatar backdrop.
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/focus_ring.dart';
 import '../../../core/widgets/stagger_in.dart';
+import '../../dashboard/domain/scenario.dart';
 
-class SimulationScreen extends StatelessWidget {
+class SimulationScreen extends ConsumerWidget {
   const SimulationScreen({super.key, required this.scenarioId});
 
   final String scenarioId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Mockup `.sim-scenario-name`: "The Skeptical CFO · Jamie".
+    final scenario = ref.watch(scenarioByIdProvider(scenarioId));
+    final title = scenario == null
+        ? 'Scenario: $scenarioId'
+        : '${scenario.name} · ${scenario.characterName}';
     return Scaffold(
       backgroundColor: AppColors.simulationBackground,
       body: Stack(
@@ -71,7 +79,7 @@ class SimulationScreen extends StatelessWidget {
                   StaggerIn(
                     index: 1,
                     child: Text(
-                      'Simulation coming in Phase 2',
+                      'Simulation coming soon',
                       style: AppTextStyles.subheading,
                     ),
                   ),
@@ -116,11 +124,15 @@ class SimulationScreen extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Scenario: $scenarioId',
-                          style: AppTextStyles.body.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
+                        Flexible(
+                          child: Text(
+                            title,
+                            style: AppTextStyles.body.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         _EndSessionButton(

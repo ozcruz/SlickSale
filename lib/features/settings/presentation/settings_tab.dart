@@ -1,21 +1,25 @@
-// Mirrors the "Settings" mockup tab. Deviations + elevations:
-// - Profile rows are read-only for Phase 1 (no chevrons): editing flows
-//   don't exist yet and a chevron that does nothing would mislead.
-// - "Delete Account" omitted until a real deletion flow exists (showing a
-//   destructive control that does nothing is worse than its absence).
-// - Added: shimmer skeleton while the profile loads, hover states on the
-//   actionable row, inline spinner while signing out.
+// Mirrors the "Settings" mockup tab. Profile rows now carry a real Edit
+// Profile flow (modal dialog), App gains Send Feedback (mailto), and
+// Account gains Delete Account — which, per the v1 spec, confirms and then
+// signs out; permanent data removal ships with a real deletion backend.
+// Elevations: shimmer skeleton while the profile loads, hover states on
+// actionable rows, inline spinner while signing out.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/extensions.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/interactive_card.dart';
 import '../../../core/widgets/skeletons.dart';
 import '../../../core/widgets/stagger_in.dart';
 import '../../auth/data/user_repository.dart';
 import '../../auth/domain/app_user.dart';
 import '../../auth/presentation/auth_controllers.dart';
+import 'edit_profile_dialog.dart';
 
 class SettingsTab extends ConsumerWidget {
   const SettingsTab({super.key});
@@ -61,9 +65,65 @@ class _SettingsContent extends ConsumerWidget {
 
   final AppUser? profile;
 
+  Future<void> _sendFeedback(BuildContext context) async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: AppConfig.feedbackEmail,
+      query: 'subject=${Uri.encodeComponent('SlickSale Feedback')}',
+    );
+    var opened = false;
+    try {
+      opened = await launchUrl(uri);
+    } on Exception {
+      opened = false;
+    }
+    if (!opened && context.mounted) {
+      context.showAppSnackBar(
+        'Could not open your email app. Reach us at '
+        '${AppConfig.feedbackEmail}.',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Delete account?'),
+            content: const Text(
+              "You'll be signed out immediately. To have your data "
+              'permanently removed, send us a note via Send Feedback.',
+            ),
+            actions: [
+              AppButton(
+                label: 'Cancel',
+                variant: AppButtonVariant.ghost,
+                expand: false,
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+              ),
+              _DangerButton(
+                label: 'Delete Account',
+                onTap: () => Navigator.of(dialogContext).pop(true),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    // v1 deletion: sign out only (per spec); a real deletion flow comes
+    // with backend support.
+    if (confirmed) {
+      await ref.read(signOutControllerProvider.notifier).signOut();
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final signOutState = ref.watch(signOutControllerProvider);
+    final user = profile;
 
     return ListView(
       padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
@@ -72,22 +132,33 @@ class _SettingsContent extends ConsumerWidget {
           index: 0,
           title: 'Profile',
           children: [
-            _InfoRow(label: 'Name', value: profile?.displayName ?? '—'),
-            _InfoRow(label: 'Email', value: profile?.email ?? '—'),
+            _InfoRow(label: 'Name', value: user?.displayName ?? '—'),
+            _InfoRow(label: 'Email', value: user?.email ?? '—'),
             _InfoRow(
               label: 'Experience Level',
-              value: profile?.experienceLevel.label ?? '—',
+              value: user?.experienceLevel.label ?? '—',
             ),
-            _InfoRow(label: 'Industry', value: profile?.industry ?? '—'),
+            _InfoRow(label: 'Industry', value: user?.industry ?? '—'),
+            if (user != null)
+              _ActionRow(
+                label: 'Edit Profile',
+                icon: Icons.edit_rounded,
+                onTap: () => EditProfileDialog.show(context, user),
+              ),
           ],
         ),
         _Section(
           index: 1,
           title: 'App',
-          children: const [
-            _InfoRow(
+          children: [
+            const _InfoRow(
               label: 'About SlickSale',
               value: 'Version ${AppConfig.appVersion}',
+            ),
+            _ActionRow(
+              label: 'Send Feedback',
+              icon: Icons.mail_outline_rounded,
+              onTap: () => _sendFeedback(context),
             ),
           ],
         ),
@@ -103,6 +174,14 @@ class _SettingsContent extends ConsumerWidget {
                   ? null
                   : () =>
                       ref.read(signOutControllerProvider.notifier).signOut(),
+            ),
+            _ActionRow(
+              label: 'Delete Account',
+              icon: Icons.delete_outline_rounded,
+              danger: true,
+              onTap: signOutState.isLoading
+                  ? null
+                  : () => _confirmDeleteAccount(context, ref),
             ),
           ],
         ),
@@ -197,6 +276,7 @@ class _ActionRow extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.loading = false,
+    this.danger = false,
   });
 
   final String label;
@@ -204,8 +284,13 @@ class _ActionRow extends StatelessWidget {
   final VoidCallback? onTap;
   final bool loading;
 
+  /// Mockup `.settings-row.danger`: destructive rows render in error red.
+  final bool danger;
+
   @override
   Widget build(BuildContext context) {
+    final color = danger ? AppColors.error : AppColors.textTertiary;
+
     return InkWell(
       onTap: onTap,
       mouseCursor: SystemMouseCursors.click,
@@ -216,7 +301,10 @@ class _ActionRow extends StatelessWidget {
           children: [
             Text(
               label,
-              style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
+              style: AppTextStyles.body.copyWith(
+                fontWeight: FontWeight.w500,
+                color: danger ? AppColors.error : AppColors.textPrimary,
+              ),
             ),
             if (loading)
               const SizedBox(
@@ -225,8 +313,37 @@ class _ActionRow extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             else
-              Icon(icon, size: 16, color: AppColors.textTertiary),
+              Icon(icon, size: 16, color: color),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Destructive confirm button (error-muted fill, error text) — the dialog
+/// counterpart of the simulation screen's End Session pill.
+class _DangerButton extends StatelessWidget {
+  const _DangerButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InteractiveCard(
+      onTap: onTap,
+      padding: AppComponentMetrics.buttonPadding,
+      borderRadius: AppRadii.mdRadius,
+      backgroundColor: AppColors.errorMuted,
+      hoverBackgroundColor: AppColors.errorMutedBorder,
+      borderColor: AppColors.errorMutedBorder,
+      hoverBorderColor: AppColors.error,
+      child: Text(
+        label,
+        style: AppTextStyles.body.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppColors.error,
         ),
       ),
     );
@@ -244,15 +361,15 @@ class _SettingsSkeleton extends StatelessWidget {
         children: const [
           SkeletonBox(width: 60, height: 12),
           SizedBox(height: AppSpacing.md),
-          SkeletonBox(height: 224, radius: AppRadii.lg),
+          SkeletonBox(height: 280, radius: AppRadii.lg),
           SizedBox(height: AppSpacing.xl),
           SkeletonBox(width: 40, height: 12),
           SizedBox(height: AppSpacing.md),
-          SkeletonBox(height: 56, radius: AppRadii.lg),
+          SkeletonBox(height: 112, radius: AppRadii.lg),
           SizedBox(height: AppSpacing.xl),
           SkeletonBox(width: 70, height: 12),
           SizedBox(height: AppSpacing.md),
-          SkeletonBox(height: 56, radius: AppRadii.lg),
+          SkeletonBox(height: 112, radius: AppRadii.lg),
         ],
       ),
     );

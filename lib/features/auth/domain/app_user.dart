@@ -4,6 +4,15 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'app_user.freezed.dart';
 part 'app_user.g.dart';
 
+/// Industry choices offered during onboarding and profile editing.
+const List<({String emoji, String label})> industryOptions = [
+  (emoji: '☁️', label: 'SaaS'),
+  (emoji: '🛡️', label: 'Insurance'),
+  (emoji: '🏠', label: 'Real Estate'),
+  (emoji: '🛍️', label: 'Retail'),
+  (emoji: '✨', label: 'Other'),
+];
+
 /// Sales experience level chosen during onboarding.
 enum ExperienceLevel {
   beginner,

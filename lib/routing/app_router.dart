@@ -13,10 +13,11 @@ import '../features/auth/presentation/signup_screen.dart';
 import '../features/auth/presentation/splash_screen.dart';
 import '../features/dashboard/presentation/dashboard_shell.dart';
 import '../features/dashboard/presentation/home_tab.dart';
-import '../features/dashboard/presentation/settings_tab.dart';
-import '../features/dashboard/presentation/stats_tab.dart';
-import '../features/scorecard/presentation/scorecard_screen.dart';
+import '../features/dashboard/presentation/scenario_picker_screen.dart';
+import '../features/settings/presentation/settings_tab.dart';
 import '../features/simulation/presentation/simulation_screen.dart';
+import '../features/stats/presentation/scorecard_screen.dart';
+import '../features/stats/presentation/stats_tab.dart';
 import 'not_found_screen.dart';
 
 part 'app_router.g.dart';
@@ -92,6 +93,11 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: RoutePaths.scenarios,
+        pageBuilder: (context, state) =>
+            _fadeSlideUpPage(state: state, child: const ScenarioPickerScreen()),
       ),
       GoRoute(
         path: RoutePaths.simulation,

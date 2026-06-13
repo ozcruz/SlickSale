@@ -6,7 +6,9 @@ import 'focus_ring.dart';
 /// Surface card (mockup `.card`) with the `.card-hover` interactions when
 /// tappable: hover elevation + border shift, 0.97 press scale, keyboard
 /// focus ring, click cursor. Color overrides let callers express selected
-/// states (e.g. onboarding selection cards).
+/// states (e.g. onboarding selection cards). [hoverTranslateY] adds the
+/// scenario-card hover lift; [clipBehavior] lets children (e.g. accent
+/// strips) clip to the rounded corners.
 class InteractiveCard extends StatefulWidget {
   const InteractiveCard({
     super.key,
@@ -18,6 +20,8 @@ class InteractiveCard extends StatefulWidget {
     this.hoverBackgroundColor = AppColors.surfaceElevated,
     this.borderColor = AppColors.border,
     this.hoverBorderColor = AppColors.borderFocus,
+    this.hoverTranslateY = 0,
+    this.clipBehavior = Clip.none,
   });
 
   final Widget child;
@@ -28,6 +32,8 @@ class InteractiveCard extends StatefulWidget {
   final Color hoverBackgroundColor;
   final Color borderColor;
   final Color hoverBorderColor;
+  final double hoverTranslateY;
+  final Clip clipBehavior;
 
   @override
   State<InteractiveCard> createState() => _InteractiveCardState();
@@ -49,6 +55,7 @@ class _InteractiveCardState extends State<InteractiveCard> {
     final Widget card = AnimatedContainer(
       duration: AppMotion.hover,
       curve: Curves.easeOut,
+      clipBehavior: widget.clipBehavior,
       decoration: BoxDecoration(
         color: background,
         borderRadius: widget.borderRadius,
@@ -78,7 +85,7 @@ class _InteractiveCardState extends State<InteractiveCard> {
 
     if (!tappable) return card;
 
-    return AnimatedScale(
+    final Widget interactive = AnimatedScale(
       scale: _pressed ? AppMotion.pressScale : 1,
       duration: AppMotion.press,
       curve: Curves.easeOut,
@@ -87,6 +94,21 @@ class _InteractiveCardState extends State<InteractiveCard> {
         borderRadius: widget.borderRadius,
         child: card,
       ),
+    );
+
+    if (widget.hoverTranslateY == 0) return interactive;
+
+    // Hover lift (scenario cards): 200ms per the elevation directive — the
+    // border/background shift above stays on the faster hover timing.
+    return AnimatedContainer(
+      duration: AppMotion.fast,
+      curve: Curves.easeOut,
+      transform: Matrix4.translationValues(
+        0,
+        _hovered ? widget.hoverTranslateY : 0,
+        0,
+      ),
+      child: interactive,
     );
   }
 }

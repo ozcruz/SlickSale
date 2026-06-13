@@ -87,8 +87,25 @@ abstract final class AppMotion {
   static const Duration slow = Duration(milliseconds: 300);
   static const Duration entrance = Duration(milliseconds: 400);
   static const Duration staggerStep = Duration(milliseconds: 50);
+
+  /// Dashboard tab cross-fade (design elevation directive: 150ms).
+  static const Duration tabFade = Duration(milliseconds: 150);
+
+  /// Score number count-up (directive: 0 -> value over 600ms).
+  static const Duration countUp = Duration(milliseconds: 600);
+
+  /// Ambient loops: streak-flame pulse, credits-pill border glow (2s).
+  static const Duration pulse = Duration(seconds: 2);
+
   static const Curve curve = Curves.easeOutCubic;
   static const double pressScale = 0.97;
+
+  /// Scenario-card hover lift (directive: translateY(-2px)).
+  static const double hoverLift = -2;
+
+  /// Streak-flame pulse peak scale (directive: 1.0 -> 1.1 -> 1.0).
+  static const double pulseScale = 1.1;
+
   static const double disabledOpacity = 0.4;
 }
 
@@ -111,12 +128,29 @@ abstract final class AppComponentMetrics {
   static const EdgeInsets pillPadding =
       EdgeInsets.symmetric(horizontal: 14, vertical: 6);
 
+  /// Mockup `.badge`: padding 2px 8px.
+  static const EdgeInsets badgePadding =
+      EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2);
+
   /// 2px keyboard-focus outline (accessibility directive).
   static const double focusRingWidth = 2;
 
   static const double dashboardMaxWidth = 800;
   static const double authCardMaxWidth = 400;
   static const double onboardingCardMaxWidth = 520;
+
+  /// Mockup `.progress-bar`: 6px tall.
+  static const double progressBarHeight = 6;
+
+  /// Mockup `.cat-bar`: 120px wide; narrower on compact layouts.
+  static const double categoryBarWidth = 120;
+  static const double categoryBarWidthCompact = 72;
+
+  /// Mockup `.scenario-card::before`: 3px accent strip.
+  static const double scenarioAccentHeight = 3;
+
+  /// Mockup `.scenario-avatar`: 40px circle.
+  static const double scenarioAvatarSize = 40;
 }
 
 /// Typography — Inter via Google Fonts. letterSpacing/height values come from
@@ -195,6 +229,22 @@ abstract final class AppTextStyles {
     letterSpacing: -2,
     height: 1.1,
     color: AppColors.textPrimary,
+  );
+
+  /// Mockup `.score-hero .hero-num`: 72px / 800.
+  static final TextStyle scoreHero = GoogleFonts.inter(
+    fontSize: 72,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -3,
+    height: 1.1,
+    color: AppColors.textPrimary,
+  );
+
+  /// Mockup `.scenario-avatar`: 18px / 700 initial inside the circle.
+  static final TextStyle avatarInitial = GoogleFonts.inter(
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+    height: 1,
   );
 }
 
@@ -276,6 +326,18 @@ ThemeData buildAppTheme() {
       ),
       suffixIconColor: AppColors.textTertiary,
       prefixIconColor: AppColors.textTertiary,
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: AppRadii.xlRadius,
+        side: BorderSide(color: AppColors.border),
+      ),
+      titleTextStyle: AppTextStyles.heading,
+      contentTextStyle: AppTextStyles.body.copyWith(
+        color: AppColors.textSecondary,
+      ),
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: AppColors.surfaceElevated,
