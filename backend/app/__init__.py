@@ -1,0 +1,1 @@
+"""SlickSale FastAPI backend."""
